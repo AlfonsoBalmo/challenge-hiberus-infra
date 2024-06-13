@@ -76,14 +76,14 @@ resource "aws_iam_role" "lambda_exec_role" {
 resource "aws_iam_role_policy_attachment" "lambda_exec_policy" {
   count = length(data.aws_iam_role.existing_lambda_exec_role) == 0 ? 1 : 0
 
-  role       = aws_iam_role.lambda_exec_role.name
+  role       = aws_iam_role.lambda_exec_role[count.index].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
 resource "aws_lambda_function" "docker_deploy_lambda" {
   filename         = "${path.module}/lambda_deploy.zip"
   function_name    = "docker_deploy_lambda"
-  role             = coalesce(data.aws_iam_role.existing_lambda_exec_role.arn, aws_iam_role.lambda_exec_role.arn)
+  role             = coalesce(data.aws_iam_role.existing_lambda_exec_role.arn, aws_iam_role.lambda_exec_role[0].arn)
   handler          = "index.handler"
   runtime          = "nodejs18.x"
 
