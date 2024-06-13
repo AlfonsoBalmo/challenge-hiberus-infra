@@ -102,4 +102,3 @@ output "ecs_service_name" {
 output "ecs_task_definition" {
   value = aws_ecs_task_definition.app.family
 }
-s

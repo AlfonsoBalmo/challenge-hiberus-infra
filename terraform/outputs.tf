@@ -1,7 +1,7 @@
-output "db_endpoint" {
-  value = aws_db_instance.default.endpoint
+output "ecs_service_name" {
+  value = aws_ecs_service.app.name
 }
 
-output "lambda_arn" {
-  value = aws_lambda_function.docker_deploy_lambda.arn
+output "ecs_task_definition" {
+  value = aws_ecs_task_definition.app.family
 }
