@@ -1,14 +1,20 @@
+provider "aws" {
+  region = var.aws_region
+}
 
+# Crear VPC
 resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
 }
 
+# Crear Subnet
 resource "aws_subnet" "main" {
   count = 2
   cidr_block = cidrsubnet(aws_vpc.main.cidr_block, 8, count.index)
   vpc_id = aws_vpc.main.id
 }
 
+# Crear Security Group para Lambda
 resource "aws_security_group" "lambda_sg" {
   name_prefix = "lambda_sg_"
   vpc_id = aws_vpc.main.id
@@ -28,19 +34,27 @@ resource "aws_security_group" "lambda_sg" {
   }
 }
 
+# Crear Instancia RDS en la misma VPC y Subnet
 resource "aws_db_instance" "default" {
-  allocated_storage    = 20
-  engine               = "mysql"
-  engine_version       = "5.7"
-  instance_class       = "db.t3.micro"
-  db_name              = var.db_name
-  username             = var.db_user
-  password             = var.db_password
-  parameter_group_name = "default.mysql5.7"
+  allocated_storage      = 20
+  engine                 = "mysql"
+  engine_version         = "5.7"
+  instance_class         = "db.t3.micro"
+  db_name                = var.db_name
+  username               = var.db_user
+  password               = var.db_password
+  parameter_group_name   = "default.mysql5.7"
   vpc_security_group_ids = [aws_security_group.lambda_sg.id]
-  skip_final_snapshot  = true
+  skip_final_snapshot    = true
+  db_subnet_group_name   = aws_db_subnet_group.main.name
 }
 
+resource "aws_db_subnet_group" "main" {
+  name       = "main"
+  subnet_ids = aws_subnet.main[*].id
+}
+
+# Crear rol de ejecución para Lambda
 resource "aws_iam_role" "lambda_exec_role" {
   name = "lambda_exec_role"
 
@@ -58,11 +72,13 @@ resource "aws_iam_role" "lambda_exec_role" {
   })
 }
 
+# Adjuntar políticas al rol de ejecución de Lambda
 resource "aws_iam_role_policy_attachment" "lambda_exec_policy" {
   role       = aws_iam_role.lambda_exec_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+# Crear función Lambda
 resource "aws_lambda_function" "docker_deploy_lambda" {
   filename         = "${path.module}/lambda_deploy.zip"
   function_name    = "docker_deploy_lambda"
@@ -78,5 +94,10 @@ resource "aws_lambda_function" "docker_deploy_lambda" {
       MYSQLDB_NAME     = var.db_name
       MYSQLDB_PORT     = "3306"
     }
+  }
+
+  vpc_config {
+    security_group_ids = [aws_security_group.lambda_sg.id]
+    subnet_ids         = aws_subnet.main[*].id
   }
 }
