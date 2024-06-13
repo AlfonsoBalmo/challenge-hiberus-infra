@@ -31,7 +31,7 @@ jobs:
       - name: Generate Lambda deployment package
         run: |
           cd lambda
-          zip -r ../lambda_deploy.zip .
+          zip -r ../terraform/lambda_deploy.zip .
           cd ..
 
       - name: Configure AWS credentials
