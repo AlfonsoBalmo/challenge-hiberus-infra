@@ -67,6 +67,6 @@ resource "aws_db_instance" "mysql" {
   vpc_security_group_ids = [aws_security_group.db_sg.id]
 
   tags = {
-    Name = "myapp-mysql"
+    Name = "hiberus -mysql"
   }
 }
