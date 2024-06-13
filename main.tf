@@ -70,3 +70,4 @@ resource "aws_db_instance" "mysql" {
     Name = "hiberus-mysql"
   }
 }
+
