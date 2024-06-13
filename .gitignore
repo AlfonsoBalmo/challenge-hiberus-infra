@@ -1,3 +1,8 @@
+# Terraform files
 *.tfstate
-*.tfstate.backup
+*.tfstate.*
 .terraform/
+terraform.tfvars
+
+# Lambda deployment package
+lambda_deploy.zip
