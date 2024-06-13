@@ -13,13 +13,13 @@ resource "aws_subnet" "main" {
   vpc_id = aws_vpc.main.id
 }
 
-resource "aws_security_group" "lambda_sg" {
-  name_prefix = "lambda_sg_"
+resource "aws_security_group" "ecs_sg" {
+  name_prefix = "ecs_sg_"
   vpc_id = aws_vpc.main.id
 
   ingress {
-    from_port   = 3306
-    to_port     = 3306
+    from_port   = 80
+    to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -46,21 +46,13 @@ resource "aws_db_instance" "default" {
   username               = var.db_user
   password               = var.db_password
   parameter_group_name   = "default.mysql5.7"
-  vpc_security_group_ids = [aws_security_group.lambda_sg.id]
+  vpc_security_group_ids = [aws_security_group.ecs_sg.id]
   skip_final_snapshot    = true
   db_subnet_group_name   = aws_db_subnet_group.main.name
 }
 
-data "aws_iam_role" "existing_lambda_exec_role" {
-  name = "lambda_exec_role"
-  count = 1
-  depends_on = []
-}
-
-resource "aws_iam_role" "lambda_exec_role" {
-  count = length(data.aws_iam_role.existing_lambda_exec_role) == 0 ? 1 : 0
-
-  name = "lambda_exec_role"
+resource "aws_iam_role" "ecs_task_execution_role" {
+  name = "ecsTaskExecutionRole"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -69,39 +61,127 @@ resource "aws_iam_role" "lambda_exec_role" {
         Action = "sts:AssumeRole",
         Effect = "Allow",
         Principal = {
-          Service = "lambda.amazonaws.com"
+          Service = "ecs-tasks.amazonaws.com"
         }
       }
     ]
   })
 }
 
-resource "aws_iam_role_policy_attachment" "lambda_exec_policy" {
-  count = length(data.aws_iam_role.existing_lambda_exec_role) == 0 ? 1 : 0
-
-  role       = length(data.aws_iam_role.existing_lambda_exec_role) == 0 ? aws_iam_role.lambda_exec_role[0].name : data.aws_iam_role.existing_lambda_exec_role[0].name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
+  role       = aws_iam_role.ecs_task_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-resource "aws_lambda_function" "docker_deploy_lambda" {
-  filename         = "${path.module}/lambda_deploy.zip"
-  function_name    = "docker_deploy_lambda"
-  role             = length(data.aws_iam_role.existing_lambda_exec_role) == 0 ? aws_iam_role.lambda_exec_role[0].arn : data.aws_iam_role.existing_lambda_exec_role[0].arn
-  handler          = "index.handler"
-  runtime          = "nodejs18.x"
+resource "aws_ecs_cluster" "main" {
+  name = "ecs-cluster"
+}
 
-  environment {
-    variables = {
-      MYSQLDB_HOST     = aws_db_instance.default.endpoint
-      MYSQLDB_USER     = var.db_user
-      MYSQLDB_PASSWORD = var.db_password
-      MYSQLDB_NAME     = var.db_name
-      MYSQLDB_PORT     = "3306"
+resource "aws_ecs_task_definition" "app" {
+  family                   = "my-app"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = "256"
+  memory                   = "512"
+  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+
+  container_definitions = jsonencode([
+    {
+      name      = "my-app"
+      image     = "${aws_ecr_repository.myapp.repository_url}:latest"
+      cpu       = 256
+      memory    = 512
+      essential = true
+      portMappings = [
+        {
+          containerPort = 80
+          hostPort      = 80
+        }
+      ],
+      environment = [
+        { name = "MYSQLDB_HOST", value = aws_db_instance.default.endpoint },
+        { name = "MYSQLDB_USER", value = var.db_user },
+        { name = "MYSQLDB_PASSWORD", value = var.db_password },
+        { name = "MYSQLDB_NAME", value = var.db_name },
+        { name = "MYSQLDB_PORT", value = "3306" }
+      ]
     }
+  ])
+}
+
+resource "aws_ecs_service" "app" {
+  name            = "my-app-service"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.app.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets         = aws_subnet.main[*].id
+    security_groups = [aws_security_group.ecs_sg.id]
   }
 
-  vpc_config {
-    security_group_ids = [aws_security_group.lambda_sg.id]
-    subnet_ids         = aws_subnet.main[*].id
+  load_balancer {
+    target_group_arn = aws_lb_target_group.app.arn
+    container_name   = "my-app"
+    container_port   = 80
   }
+}
+
+resource "aws_lb" "app" {
+  name               = "app-lb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.ecs_sg.id]
+  subnets            = aws_subnet.main[*].id
+}
+
+resource "aws_lb_target_group" "app" {
+  name     = "app-tg"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.main.id
+  health_check {
+    path                = "/"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    matcher             = "200-299"
+  }
+}
+
+resource "aws_lb_listener" "http" {
+  load_balancer_arn = aws_lb.app.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.app.arn
+  }
+}
+
+resource "aws_ecr_repository" "myapp" {
+  name = "myapp"
+}
+
+output "db_endpoint" {
+  value = aws_db_instance.default.endpoint
+}
+
+output "ecs_service_name" {
+  value = aws_ecs_service.app.name
+}
+
+output "ecs_task_definition" {
+  value = aws_ecs_task_definition.app.family
+}
+
+output "ecr_repository_url" {
+  value = aws_ecr_repository.myapp.repository_url
+}
+
+output "alb_dns" {
+  value = aws_lb.app.dns_name
 }
