@@ -15,8 +15,8 @@ resource "aws_lambda_function" "docker_deploy_lambda" {
   role          = aws_iam_role.lambda_exec_role.arn
   handler       = "index.handler"
   runtime       = "nodejs14.x"
-  s3_bucket     = var.lambda_s3_bucket
-  s3_key        = var.lambda_s3_key
+  filename      = "${path.module}/../lambda/lambda_deploy.zip"
+  source_code_hash = filebase64sha256("${path.module}/../lambda/lambda_deploy.zip")
 
   environment {
     variables = {
@@ -51,3 +51,4 @@ resource "aws_iam_role_policy_attachment" "lambda_policy_attach" {
   role       = aws_iam_role.lambda_exec_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
+  
