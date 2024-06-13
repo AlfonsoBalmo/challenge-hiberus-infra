@@ -4,5 +4,6 @@
 .terraform/
 terraform.tfvars
 
-# Lambda deployment package
+# Node modules and package
+node_modules/
 lambda_deploy.zip

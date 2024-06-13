@@ -1,0 +1,8 @@
+{
+    "name": "lambda_deploy",
+    "version": "1.0.0",
+    "description": "Lambda function to deploy Docker container",
+    "main": "index.js",
+    "dependencies": {}
+  }
+  

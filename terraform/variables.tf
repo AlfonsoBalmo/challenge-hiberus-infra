@@ -21,13 +21,3 @@ variable "db_password" {
   type        = string
   default     = "123456789hiberus"
 }
-
-variable "lambda_s3_bucket" {
-  description = "The S3 bucket containing the Lambda deployment package"
-  type        = string
-}
-
-variable "lambda_s3_key" {
-  description = "The S3 key for the Lambda deployment package"
-  type        = string
-}
