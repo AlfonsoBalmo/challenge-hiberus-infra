@@ -8,6 +8,7 @@ resource "aws_vpc" "main" {
 
 resource "aws_subnet" "main" {
   count = 2
+  availability_zone = element(["us-east-1a", "us-east-1b"], count.index)
   cidr_block = cidrsubnet(aws_vpc.main.cidr_block, 8, count.index)
   vpc_id = aws_vpc.main.id
 }
@@ -53,7 +54,6 @@ resource "aws_db_instance" "default" {
 data "aws_iam_role" "existing_lambda_exec_role" {
   name = "lambda_exec_role"
   count = 1
-  # This is just to avoid using the `count.index` but also just to have a non-nullable resource
   depends_on = []
 }
 
