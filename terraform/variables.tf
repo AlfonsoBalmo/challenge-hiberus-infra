@@ -21,3 +21,18 @@ variable "db_password" {
   type        = string
   default     = "123456789hiberus"
 }
+
+variable "existing_vpc_id" {
+  description = "The ID of an existing VPC"
+  type        = string
+}
+
+variable "existing_security_group_id" {
+  description = "The ID of an existing security group"
+  type        = string
+}
+
+variable "existing_db_subnet_group_name" {
+  description = "The name of an existing DB subnet group"
+  type        = string
+}
