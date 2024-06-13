@@ -31,6 +31,10 @@ resource "aws_security_group" "ecs_sg" {
   }
 }
 
+resource "aws_ecr_repository" "myapp" {
+  name = "myapp"
+}
+
 resource "aws_ecs_cluster" "main" {
   name = "ecs-cluster"
 }
@@ -45,7 +49,7 @@ resource "aws_ecs_task_definition" "app" {
   container_definitions = jsonencode([
     {
       name      = "my-app"
-      image     = "${var.ecr_repository_url}:latest" # URL de la imagen en ECR
+      image     = "${aws_ecr_repository.myapp.repository_url}:latest"
       cpu       = 256
       memory    = 512
       essential = true
@@ -89,4 +93,20 @@ resource "aws_db_instance" "default" {
   password             = var.db_password
   parameter_group_name = "default.mysql5.7"
   skip_final_snapshot  = true
+}
+
+output "db_endpoint" {
+  value = aws_db_instance.default.endpoint
+}
+
+output "ecs_service_name" {
+  value = aws_ecs_service.app.name
+}
+
+output "ecs_task_definition" {
+  value = aws_ecs_task_definition.app.family
+}
+
+output "ecr_repository_url" {
+  value = aws_ecr_repository.myapp.repository_url
 }
