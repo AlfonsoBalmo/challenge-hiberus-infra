@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "db_name" {
   description = "The name of the database"
   type        = string
-  default     = "challenge-hiberus"
+  default     = "challengehiberus"
 }
 
 variable "db_user" {
