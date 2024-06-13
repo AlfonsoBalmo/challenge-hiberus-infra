@@ -1,38 +1,23 @@
-variable "db_identifier" {
-  description = "The DB instance identifier"
+variable "aws_region" {
+  description = "The AWS region to create resources in"
   type        = string
-  default     = "myapp-db"
+  default     = "us-east-1"
 }
 
 variable "db_name" {
-  description = "The name of the database to create"
+  description = "The name of the database"
   type        = string
   default     = "challenge-hiberus"
 }
 
-variable "db_username" {
-  description = "The username for the database"
+variable "db_user" {
+  description = "The database admin user"
   type        = string
   default     = "hiberus"
 }
 
 variable "db_password" {
-  description = "The password for the database"
+  description = "The database admin password"
   type        = string
   default     = "123456789hiberus"
-}
-
-variable "existing_vpc_id" {
-  description = "The ID of an existing VPC"
-  type        = string
-}
-
-variable "existing_security_group_id" {
-  description = "The ID of an existing security group"
-  type        = string
-}
-
-variable "existing_db_subnet_group_name" {
-  description = "The name of an existing DB subnet group"
-  type        = string
 }
