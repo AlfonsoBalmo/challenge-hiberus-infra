@@ -4,7 +4,7 @@ resource "aws_db_instance" "default" {
   engine               = "mysql"
   engine_version       = "5.7"
   instance_class       = "db.t2.micro"
-  name                 = "hiberus"
+  db_name                 = "hiberus"
   username             = "hiberus"
   password             = "hiberus123456789"
   parameter_group_name = "default.mysql5.7"
