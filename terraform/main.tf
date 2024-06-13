@@ -31,12 +31,12 @@ resource "aws_security_group" "ecs_sg" {
   }
 }
 
-resource "aws_ecr_repository" "hiberus" {
+resource "aws_ecr_repository" "myapp" {
   name = "hiberus"
 }
 
 resource "aws_ecs_cluster" "main" {
-  name = "hiberus-cluster"
+  name = "ecs-cluster-hiberus"
 }
 
 resource "aws_ecs_task_definition" "app" {
@@ -71,7 +71,7 @@ resource "aws_ecs_task_definition" "app" {
 }
 
 resource "aws_ecs_service" "app" {
-  name            = "my-app-hiberus"
+  name            = "my-app-service-hiberus"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.app.arn
   desired_count   = 1
