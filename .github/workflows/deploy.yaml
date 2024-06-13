@@ -13,26 +13,12 @@ permissions:
   contents: write
 
 jobs:
-  build-and-push:
+  terraform:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: '20'
-
-      - name: Install zip
-        run: sudo apt-get install -y zip
-
-      - name: Generate Lambda deployment package
-        run: |
-          cd lambda
-          zip -r ../terraform/lambda_deploy.zip .
-          cd ..
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
