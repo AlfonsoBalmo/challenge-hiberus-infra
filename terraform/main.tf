@@ -2,18 +2,15 @@ provider "aws" {
   region = "us-east-1"
 }
 
-resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
-
-  tags = {
-    Name = "main-vpc"
-  }
+variable "existing_vpc_id" {
+  description = "The ID of an existing VPC"
+  type        = string
 }
 
 resource "aws_subnet" "public" {
   count                   = 2
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = cidrsubnet(aws_vpc.main.cidr_block, 8, count.index)
+  vpc_id                  = var.existing_vpc_id
+  cidr_block              = cidrsubnet("10.0.0.0/16", 8, count.index)
   availability_zone       = element(["us-east-1a", "us-east-1b"], count.index)
   map_public_ip_on_launch = true
 
@@ -25,7 +22,7 @@ resource "aws_subnet" "public" {
 resource "aws_security_group" "db_sg" {
   name        = "db_sg"
   description = "Allow MySQL inbound traffic"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = var.existing_vpc_id
 
   ingress {
     from_port   = 3306
@@ -43,11 +40,11 @@ resource "aws_security_group" "db_sg" {
 }
 
 resource "aws_db_subnet_group" "main" {
-  name       = "main"
+  name       = "main-${random_id.db_subnet_group.hex}"
   subnet_ids = aws_subnet.public[*].id
 
   tags = {
-    Name = "main"
+    Name = "main-${random_id.db_subnet_group.hex}"
   }
 }
 
@@ -70,4 +67,8 @@ resource "aws_db_instance" "mysql" {
   tags = {
     Name = "hiberus-mysql"
   }
+}
+
+resource "random_id" "db_subnet_group" {
+  byte_length = 4
 }
