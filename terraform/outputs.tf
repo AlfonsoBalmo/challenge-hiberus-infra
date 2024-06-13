@@ -9,3 +9,7 @@ output "ecs_service_name" {
 output "ecs_task_definition" {
   value = aws_ecs_task_definition.app.family
 }
+
+output "ecr_repository_url" {
+  value = aws_ecr_repository.myapp.repository_url
+}
