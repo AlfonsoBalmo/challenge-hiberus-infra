@@ -12,7 +12,7 @@ resource "aws_db_instance" "default" {
 
 resource "aws_lambda_function" "docker_deploy_lambda" {
   function_name = "dockerDeployLambda"
-  role          = aws_iam_role.lambda_exec_role.arn
+  role          = aws_iam_role.lambda_exec_role_unique.arn
   handler       = "index.handler"
   runtime       = "nodejs14.x"
   filename      = "${path.module}/lambda_deploy.zip"
@@ -29,8 +29,8 @@ resource "aws_lambda_function" "docker_deploy_lambda" {
   }
 }
 
-resource "aws_iam_role" "lambda_exec_role" {
-  name = "lambda_exec_role"
+resource "aws_iam_role" "lambda_exec_role_unique" {
+  name = "lambda_exec_role_unique"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -48,6 +48,6 @@ resource "aws_iam_role" "lambda_exec_role" {
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_policy_attach" {
-  role       = aws_iam_role.lambda_exec_role.name
+  role       = aws_iam_role.lambda_exec_role_unique.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
