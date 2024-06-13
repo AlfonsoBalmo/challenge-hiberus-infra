@@ -90,15 +90,3 @@ resource "aws_db_instance" "default" {
   parameter_group_name = "default.mysql5.7"
   skip_final_snapshot  = true
 }
-
-output "db_endpoint" {
-  value = aws_db_instance.default.endpoint
-}
-
-output "ecs_service_name" {
-  value = aws_ecs_service.app.name
-}
-
-output "ecs_task_definition" {
-  value = aws_ecs_task_definition.app.family
-}
