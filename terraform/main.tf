@@ -2,20 +2,24 @@ provider "aws" {
   region = var.aws_region
 }
 
+# Verificar si la VPC ya existe
+data "aws_vpcs" "all" {}
+
 resource "aws_vpc" "main" {
+  count = length(data.aws_vpcs.all.ids) < 5 ? 1 : 0
   cidr_block = "10.0.0.0/16"
 }
 
 resource "aws_subnet" "main" {
   count = 2
   availability_zone = element(["us-east-1a", "us-east-1b"], count.index)
-  cidr_block = cidrsubnet(aws_vpc.main.cidr_block, 8, count.index)
-  vpc_id = aws_vpc.main.id
+  cidr_block = cidrsubnet(aws_vpc.main[0].cidr_block, 8, count.index)
+  vpc_id = aws_vpc.main[0].id
 }
 
 resource "aws_security_group" "ecs_sg" {
   name_prefix = "ecs_sg_"
-  vpc_id = aws_vpc.main.id
+  vpc_id = aws_vpc.main[0].id
 
   ingress {
     from_port   = 80
@@ -51,7 +55,13 @@ resource "aws_db_instance" "default" {
   db_subnet_group_name   = aws_db_subnet_group.main.name
 }
 
+data "aws_iam_role" "ecs_task_execution_role" {
+  name = "ecsTaskExecutionRole"
+}
+
 resource "aws_iam_role" "ecs_task_execution_role" {
+  count = length(data.aws_iam_role.ecs_task_execution_role) == 0 ? 1 : 0
+
   name = "ecsTaskExecutionRole"
 
   assume_role_policy = jsonencode({
@@ -69,7 +79,9 @@ resource "aws_iam_role" "ecs_task_execution_role" {
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
-  role       = aws_iam_role.ecs_task_execution_role.name
+  count = length(data.aws_iam_role.ecs_task_execution_role) == 0 ? 1 : 0
+
+  role       = coalesce(aws_iam_role.ecs_task_execution_role[0].name, data.aws_iam_role.ecs_task_execution_role.name)
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
@@ -83,7 +95,7 @@ resource "aws_ecs_task_definition" "app" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = "256"
   memory                   = "512"
-  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+  execution_role_arn       = coalesce(data.aws_iam_role.ecs_task_execution_role.arn, aws_iam_role.ecs_task_execution_role[0].arn)
 
   container_definitions = jsonencode([
     {
@@ -140,7 +152,7 @@ resource "aws_lb_target_group" "app" {
   name     = "app-tg"
   port     = 80
   protocol = "HTTP"
-  vpc_id   = aws_vpc.main.id
+  vpc_id   = aws_vpc.main[0].id
   health_check {
     path                = "/"
     interval            = 30
@@ -162,6 +174,12 @@ resource "aws_lb_listener" "http" {
   }
 }
 
+data "aws_ecr_repository" "myapp" {
+  name = "myapp"
+}
+
 resource "aws_ecr_repository" "myapp" {
+  count = length(data.aws_ecr_repository.myapp) == 0 ? 1 : 0
+
   name = "myapp"
 }
