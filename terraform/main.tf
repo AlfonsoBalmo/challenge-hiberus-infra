@@ -14,7 +14,7 @@ resource "aws_lambda_function" "docker_deploy_lambda" {
   function_name = "dockerDeployLambda"
   role          = aws_iam_role.lambda_exec_role_unique.arn
   handler       = "index.handler"
-  runtime       = "nodejs14.x"
+  runtime       = "nodejs20.x"  # Actualizar a la versión más reciente
   filename      = "${path.module}/lambda_deploy.zip"
   source_code_hash = filebase64sha256("${path.module}/lambda_deploy.zip")
 
